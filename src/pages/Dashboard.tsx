@@ -18,9 +18,51 @@ import {
   qrCodeOutline,
 } from "ionicons/icons";
 import { atom, useAtom } from "jotai";
+import { gql } from "@apollo/client";
 
 const popupAtom = atom(false);
 const radioGroupAtom = atom("");
+
+const FIND_PRODUCT_BY_SERIAL_NUMBER = gql`
+  query FindProductBySerialNumber($serialNumber: String!) {
+    product_serials(
+      where: { serial_number: { _eq: $serialNumber } }
+      limit: 1
+    ) {
+      id
+      product {
+        id
+        name
+      }
+      installed_at
+      capacity
+      capacity_remaining
+      hardware_installation {
+        hardware_installation_id
+      }
+    }
+  }
+`;
+
+const FIND_HARDWARE_INSTALLATIONS_BY_ID = gql`
+  query FindHardwareInstallationById($hardwareInstallationId: String!) {
+    hardware_installations(
+      where: { hardware_installation_id: { _eq: $hardwareInstallationId } }
+    ) {
+      id
+      hardware_installation_id
+      product_serial {
+        id
+        product {
+          id
+          name
+        }
+        installed_at
+        serial_number
+      }
+    }
+  }
+`;
 
 const CustomerData: React.FC = () => {
   const [isPopupOpen, setIsPopupOpen] = useAtom(popupAtom);

@@ -44,7 +44,7 @@ const App: React.FC = () => {
             <Route path="/" exact={true} component={ScannerMenu} />
             <Route path="/scanners/barcode" component={BarcodeScanner} />
             <Route path="/scanners/nfc" component={NfcScanner} />
-            <Route path="/dashboard" component={Dashboard} />
+            <Route path="/dashboard/:serialNumber" component={Dashboard} />
             <Route path="/customers" component={Customers} />
           </IonRouterOutlet>
         </IonReactRouter>

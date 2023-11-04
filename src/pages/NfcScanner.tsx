@@ -1,13 +1,43 @@
-import { Navbar, Button } from "konsta/react";
+import { Navbar, Button, Dialog, DialogButton } from "konsta/react";
 import { Link } from "react-router-dom";
 import { IonIcon, useIonRouter } from "@ionic/react";
 import { chevronBackOutline } from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { NFCReader } from "../plugins/nfc-reader";
+import { gql, useLazyQuery } from "@apollo/client";
+import { useAtom, atom } from "jotai";
+
+const FIND_PRODUCT_BY_SERIAL_NUMBER = gql`
+  query FindProductBySerialNumber($serialNumber: String!) {
+    product_serials(
+      where: { serial_number: { _eq: $serialNumber } }
+      limit: 1
+    ) {
+      id
+      product {
+        id
+        name
+      }
+      installed_at
+      capacity
+      capacity_remaining
+      hardware_installation {
+        hardware_installation_id
+      }
+    }
+  }
+`;
+
+const loadingAtom = atom(false);
+const dialogAtom = atom(false);
 
 const NfcScanner = () => {
-  const [code, setCode] = useState<string>("ABC");
+  const [code, setCode] = useState<string>("");
   const router = useIonRouter();
+
+  const [findProduct] = useLazyQuery(FIND_PRODUCT_BY_SERIAL_NUMBER);
+  const [isLoading, setIsLoading] = useAtom(loadingAtom);
+  const [showErrorDialog, setShowErrorDialog] = useAtom(dialogAtom);
 
   NFCReader.addListener("nfcRead", ({ tagId }) => {
     setCode(tagId);
@@ -21,9 +51,18 @@ const NfcScanner = () => {
     };
   }, []);
 
-  const redirectToDashboard = () => {
-    // TODO: check to database whether the tag id already registered or not
-    router.push("/dashboard", "forward", "replace");
+  const redirectToDashboard = async () => {
+    setIsLoading(true);
+    const { data } = await findProduct({ variables: { serialNumber: code } });
+    const productSerials = data["product_serials"];
+
+    if (productSerials.length > 0) {
+      router.push(`/dashboard/${code}`, "forward", "replace");
+    } else {
+      setShowErrorDialog(true);
+    }
+
+    setIsLoading(false);
   };
 
   return (
@@ -59,10 +98,22 @@ const NfcScanner = () => {
       </div>
 
       <div className={`px-4 mb-4 ${!code ? "invisible" : null}`}>
-        <Button large onClick={redirectToDashboard}>
+        <Button large onClick={redirectToDashboard} disabled={isLoading}>
           Next
         </Button>
       </div>
+
+      <Dialog
+        opened={showErrorDialog}
+        onBackdropClick={() => setShowErrorDialog(false)}
+        title="Product Not Found"
+        content="Your product not found, please check your Tag ID"
+        buttons={
+          <DialogButton onClick={() => setShowErrorDialog(false)}>
+            Ok
+          </DialogButton>
+        }
+      />
     </div>
   );
 };

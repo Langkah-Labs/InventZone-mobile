@@ -62,7 +62,7 @@ public class NFCReaderPlugin extends Plugin {
         if (adapter != null) {
             disableNfcForegroundDispatch();
         }
-        
+
         super.handleOnPause();
     }
 

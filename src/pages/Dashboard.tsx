@@ -5,13 +5,11 @@ import {
   ListItem,
   BlockTitle,
   Popup,
-  Block,
-  Page,
   Link,
   ListInput,
   Radio,
 } from "konsta/react";
-import { IonContent, IonIcon, IonInput, IonList, IonItem } from "@ionic/react";
+import { IonContent, IonIcon, useIonRouter } from "@ionic/react";
 import {
   hammerOutline,
   personAddOutline,
@@ -35,7 +33,7 @@ const CustomerData: React.FC = () => {
         title="Update Data"
         right={
           <Link navbar onClick={() => setIsPopupOpen(false)}>
-            Close
+            Save
           </Link>
         }
       />
@@ -109,10 +107,19 @@ const CustomerData: React.FC = () => {
 };
 
 const Dashboard: React.FC = () => {
+  const router = useIonRouter();
   const [isPopupOpen, setIsPopupOpen] = useAtom(popupAtom);
 
   const handleUpdateData = () => {
     setIsPopupOpen((prev) => !prev);
+  };
+
+  const handleCustomers = () => {
+    router.push("/customers");
+  };
+
+  const handleAttachProduct = () => {
+    router.push("/");
   };
 
   return (
@@ -125,10 +132,11 @@ const Dashboard: React.FC = () => {
           <p className="text-slate-500 text-md">02 February 2023</p>
         </div>
 
-        <div className="flex mx-4 gap-2 overflow-x-scroll md:overflow-auto">
+        <div className="flex mx-4 gap-2 overflow-x-scroll md:overflow-auto border rounded border-slate-100 shadow-sm">
           <Button
             outline
             large
+            onClick={handleAttachProduct}
             className="flex flex-col w-28 h-28 justify-center items-center gap-2 p-4 rounded text-xs font-medium text-center"
           >
             <IonIcon icon={hammerOutline} className="w-6 h-6"></IonIcon>
@@ -138,6 +146,7 @@ const Dashboard: React.FC = () => {
           <Button
             outline
             large
+            onClick={handleCustomers}
             className="flex flex-col w-28 h-28 justify-center items-center gap-2 p-4 rounded text-xs font-medium text-center"
           >
             <IonIcon icon={personAddOutline} className="w-6 h-6"></IonIcon>

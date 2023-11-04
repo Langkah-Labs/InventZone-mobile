@@ -1,12 +1,13 @@
 import { Navbar, Button } from "konsta/react";
 import { Link } from "react-router-dom";
-import { IonIcon } from "@ionic/react";
+import { IonIcon, useIonRouter } from "@ionic/react";
 import { chevronBackOutline } from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { NFCReader } from "../plugins/nfc-reader";
 
 const NfcScanner = () => {
-  const [code, setCode] = useState<string>();
+  const [code, setCode] = useState<string>("ABC");
+  const router = useIonRouter();
 
   NFCReader.addListener("nfcRead", ({ tagId }) => {
     setCode(tagId);
@@ -19,6 +20,11 @@ const NfcScanner = () => {
       NFCReader.removeAllListeners();
     };
   }, []);
+
+  const redirectToDashboard = () => {
+    // TODO: check to database whether the tag id already registered or not
+    router.push("/dashboard", "forward", "replace");
+  };
 
   return (
     <div className="flex flex-col h-full justify-between">
@@ -53,7 +59,9 @@ const NfcScanner = () => {
       </div>
 
       <div className={`px-4 mb-4 ${!code ? "invisible" : null}`}>
-        <Button large>Next</Button>
+        <Button large onClick={redirectToDashboard}>
+          Next
+        </Button>
       </div>
     </div>
   );

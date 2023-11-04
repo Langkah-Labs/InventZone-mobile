@@ -30,6 +30,7 @@ import "./theme/variables.css";
 import ScannerMenu from "./pages/ScannerMenu";
 import BarcodeScanner from "./pages/BarcodeScanner";
 import NfcScanner from "./pages/NfcScanner";
+import Dashboard from "./pages/Dashboard";
 
 setupIonicReact();
 
@@ -42,6 +43,7 @@ const App: React.FC = () => {
             <Route path="/" exact={true} component={ScannerMenu} />
             <Route path="/scanners/barcode" component={BarcodeScanner} />
             <Route path="/scanners/nfc" component={NfcScanner} />
+            <Route path="/dashboard" component={Dashboard} />
           </IonRouterOutlet>
         </IonReactRouter>
       </IonApp>

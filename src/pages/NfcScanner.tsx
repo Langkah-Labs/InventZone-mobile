@@ -4,8 +4,10 @@ import { IonIcon, useIonRouter } from "@ionic/react";
 import { chevronBackOutline } from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { NFCReader } from "../plugins/nfc-reader";
-import { gql, useLazyQuery } from "@apollo/client";
+import { gql, useLazyQuery, useMutation } from "@apollo/client";
 import { useAtom, atom } from "jotai";
+import { RouteComponentProps } from "react-router";
+import cuid2 from "@paralleldrive/cuid2";
 
 const FIND_PRODUCT_BY_SERIAL_NUMBER = gql`
   query FindProductBySerialNumber($serialNumber: String!) {
@@ -28,16 +30,42 @@ const FIND_PRODUCT_BY_SERIAL_NUMBER = gql`
   }
 `;
 
+const INSTALL_NEW_PRODUCT = gql`
+  mutation InstallNewProduct(
+    $hardwareInstallationId: String!
+    $productSerialId: bigint!
+  ) {
+    insert_hardware_installations_one(
+      object: {
+        hardware_installation_id: $hardwareInstallationId
+        product_serial_id: $productSerialId
+      }
+    ) {
+      id
+      hardware_installation_id
+      product_serial_id
+      created_at
+      updated_at
+    }
+  }
+`;
+
 const loadingAtom = atom(false);
 const dialogAtom = atom(false);
 
-const NfcScanner = () => {
+interface NfcScannerProps
+  extends RouteComponentProps<{
+    hardwareInstallationId?: string;
+  }> {}
+
+const NfcScanner: React.FC<NfcScannerProps> = ({ match }) => {
   const [code, setCode] = useState<string>("");
   const router = useIonRouter();
 
   const [findProduct] = useLazyQuery(FIND_PRODUCT_BY_SERIAL_NUMBER);
   const [isLoading, setIsLoading] = useAtom(loadingAtom);
   const [showErrorDialog, setShowErrorDialog] = useAtom(dialogAtom);
+  const [installProduct] = useMutation(INSTALL_NEW_PRODUCT);
 
   NFCReader.addListener("nfcRead", ({ tagId }) => {
     setCode(tagId);
@@ -57,6 +85,17 @@ const NfcScanner = () => {
     const productSerials = data?.product_serials;
 
     if (productSerials.length > 0) {
+      if (!productSerials.hardware_installation) {
+        // generate cuid
+        const newId = cuid2.createId();
+        await installProduct({
+          variables: {
+            hardwareInstallationId: newId,
+            productSerialId: productSerials?.id,
+          },
+        });
+      }
+
       router.push(`/dashboard/${code}`, "forward", "replace");
     } else {
       setShowErrorDialog(true);

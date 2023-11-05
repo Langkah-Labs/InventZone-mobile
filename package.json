@@ -25,6 +25,7 @@
     "@ionic-native/native-geocoder": "^5.36.0",
     "@ionic/react": "^7.0.0",
     "@ionic/react-router": "^7.0.0",
+    "@paralleldrive/cuid2": "^2.2.2",
     "@types/react-router": "^5.1.20",
     "@types/react-router-dom": "^5.3.3",
     "cordova-plugin-nativegeocoder": "^3.5.1",

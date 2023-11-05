@@ -413,7 +413,11 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
   };
 
   const handleAttachProduct = () => {
-    router.push("/");
+    const product = productData?.product_serials[0] || {};
+    const hardwareInstallationId =
+      product?.hardware_installation?.hardware_installation_id || "";
+
+    router.push(`/${hardwareInstallationId}`);
   };
 
   const dismantleProduct = async () => {

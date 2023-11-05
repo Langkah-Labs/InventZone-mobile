@@ -7,6 +7,7 @@ import { IonIcon, useIonRouter } from "@ionic/react";
 import { chevronBackOutline } from "ionicons/icons";
 import { useEffect } from "react";
 import { atom, useAtom } from "jotai";
+import { RouteComponentProps } from "react-router";
 
 const barcodeAtom = atom<{
   isSupported: boolean;
@@ -22,7 +23,12 @@ const barcodeAtom = atom<{
 
 const sheetAtom = atom(false);
 
-const BarcodeScanner: React.FC = () => {
+interface BarcodeScannerProps
+  extends RouteComponentProps<{
+    hardwareInstallationId?: string;
+  }> {}
+
+const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ match }) => {
   const [barcode, setBarcode] = useAtom(barcodeAtom);
   const [showSheet, setShowSheet] = useAtom(sheetAtom);
   const router = useIonRouter();

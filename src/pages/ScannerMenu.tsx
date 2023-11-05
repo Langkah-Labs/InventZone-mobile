@@ -1,6 +1,6 @@
 // import { Link } from "konsta/react";
-import { IonIcon } from "@ionic/react";
-import { Link } from "react-router-dom";
+import { IonIcon, useIonRouter } from "@ionic/react";
+import { Link, RouteComponentProps } from "react-router-dom";
 import { hardwareChipOutline, qrCodeOutline } from "ionicons/icons";
 import logo from "../../resources/logo.png";
 
@@ -19,7 +19,12 @@ const menus = [
   },
 ];
 
-const ScannerMenu: React.FC = () => {
+interface ScannerMenuProps
+  extends RouteComponentProps<{
+    hardwareInstallationId?: string;
+  }> {}
+
+const ScannerMenu: React.FC<ScannerMenuProps> = ({ match }) => {
   return (
     <div className="flex flex-col justify-center items-center min-h-screen px-8">
       <div className="flex gap-2 flex-col justify-center items-center mb-8">
@@ -35,7 +40,11 @@ const ScannerMenu: React.FC = () => {
             <Link
               key={id}
               className="flex flex-col justify-center items-center gap-2 border border-[#167AFF] rounded p-4 text-[#167AFF] hover:bg-[#167AFF] hover:text-white w-full"
-              to={href}
+              to={`${
+                match.params.hardwareInstallationId
+                  ? `${href}/${match.params.hardwareInstallationId}`
+                  : href
+              }`}
             >
               <IonIcon icon={icon} size="large"></IonIcon>
               {title}

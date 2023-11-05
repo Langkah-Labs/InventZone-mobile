@@ -20,17 +20,22 @@ import {
   qrCodeOutline,
 } from "ionicons/icons";
 import { atom, useAtom, useSetAtom } from "jotai";
-import { gql } from "@apollo/client";
+import { gql, useMutation } from "@apollo/client";
 import { RouteComponentProps } from "react-router";
 import { useQuery, useLazyQuery } from "@apollo/client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import LocalizedFormat from "dayjs/plugin/localizedFormat";
+import { Geolocation } from "@capacitor/geolocation";
+import {
+  NativeGeocoder,
+  NativeGeocoderResult,
+} from "@ionic-native/native-geocoder";
 
 dayjs.extend(LocalizedFormat);
 
 const popupAtom = atom(false);
-const radioGroupAtom = atom("");
+const productAtom = atom<any>({});
 
 const FIND_PRODUCT_BY_SERIAL_NUMBER = gql`
   query FindProductBySerialNumber($serialNumber: String!) {
@@ -49,6 +54,11 @@ const FIND_PRODUCT_BY_SERIAL_NUMBER = gql`
       hardware_installation {
         hardware_installation_id
       }
+      optical_power
+      latitude
+      longitude
+      serial_number
+      central_office
     }
   }
 `;
@@ -79,10 +89,122 @@ const FIND_HARDWARE_INSTALLATIONS_BY_ID = gql`
   }
 `;
 
+const UPDATE_PRODUCT_BY_ID = gql`
+  mutation UpdateProductById(
+    $id: bigint!
+    $latitude: String!
+    $longitude: String!
+    $productId: bigint!
+    $productName: String!
+    $opticalPower: String!
+    $centralOffice: String!
+    $capacity: bigint!
+  ) {
+    update_product_serials_by_pk(
+      pk_columns: { id: $id }
+      _set: {
+        latitude: $latitude
+        longitude: $longitude
+        optical_power: $opticalPower
+        central_office: $centralOffice
+        capacity: $capacity
+      }
+    ) {
+      id
+      created_at
+      updated_at
+    }
+    update_products_by_pk(
+      pk_columns: { id: $productId }
+      _set: { name: $productName }
+    ) {
+      id
+      created_at
+      updated_at
+    }
+  }
+`;
+
 const ProductData: React.FC = () => {
   const [isPopupOpen, setIsPopupOpen] = useAtom(popupAtom);
+  const [product, setProduct] = useAtom(productAtom);
+  const [location, setLocation] = useState<NativeGeocoderResult | null>(null);
+  const [updateProducById, { data, loading, error }] =
+    useMutation(UPDATE_PRODUCT_BY_ID);
 
-  const [groupValue, setGroupValue] = useAtom(radioGroupAtom);
+  useEffect(() => {
+    (async () => {
+      const latitude = product?.latitude;
+      const longitude = product?.longitude;
+      if (latitude && longitude) {
+        const locationData = await getRealLocation(
+          Number(latitude),
+          Number(longitude)
+        );
+        setLocation(locationData);
+      }
+    })();
+  }, []);
+
+  const getLocation = async () => {
+    const permissionStatus = await Geolocation.checkPermissions();
+    let currentPosition;
+    if (
+      permissionStatus.location !== "granted" ||
+      permissionStatus.coarseLocation !== "granted"
+    ) {
+      const granted = await Geolocation.requestPermissions();
+      if (
+        granted.location === "granted" ||
+        granted.coarseLocation === "granted"
+      ) {
+        currentPosition = await Geolocation.getCurrentPosition();
+      }
+    } else {
+      currentPosition = await Geolocation.getCurrentPosition();
+    }
+
+    console.log(
+      "CURRENT POSITION >>>>>>> ",
+      currentPosition?.coords?.latitude,
+      currentPosition?.coords?.longitude
+    );
+
+    const latitude = currentPosition?.coords?.latitude;
+    const longitude = currentPosition?.coords?.longitude;
+    if (latitude && longitude) {
+      const locationData = await getRealLocation(latitude, longitude);
+      setLocation(locationData);
+    }
+  };
+
+  const getRealLocation = async (latitude: number, longitude: number) => {
+    const geocodingResult = await NativeGeocoder.reverseGeocode(
+      latitude,
+      longitude
+    );
+
+    return geocodingResult[0];
+  };
+
+  const updateProduct = async () => {
+    console.log(product);
+
+    await updateProducById({
+      variables: {
+        id: product?.id,
+        latitude: String(location?.latitude),
+        longitude: String(location?.longitude),
+        productId: product?.product?.id,
+        productName: product?.product?.name,
+        opticalPower: product?.optical_power,
+        centralOffice: product?.central_office,
+        capacity: product?.capacity,
+      },
+    });
+
+    setIsPopupOpen(false);
+  };
 
   return (
     <Popup opened={isPopupOpen} onBackdropClick={() => setIsPopupOpen(false)}>
@@ -90,7 +212,7 @@ const ProductData: React.FC = () => {
         title="Update Data"
         right={
           <Link navbar onClick={() => setIsPopupOpen(false)}>
-            Save
+            Close
           </Link>
         }
       />
@@ -103,9 +225,16 @@ const ProductData: React.FC = () => {
             type="text"
             placeholder="Location"
             disabled
+            value={
+              location
+                ? `${location?.locality}, ${location?.administrativeArea}, ${location?.countryName}`
+                : ""
+            }
           />
           <div className="mx-4 mt-2">
-            <Button>Get Location</Button>
+            <Button outline onClick={getLocation}>
+              Get Location
+            </Button>
           </div>
         </List>
 
@@ -116,10 +245,16 @@ const ProductData: React.FC = () => {
             title="8"
             media={
               <Radio
-                component="div"
-                value="8"
-                checked={groupValue === "8"}
-                onChange={() => setGroupValue("8")}
+                value={8}
+                checked={product?.capacity === 8}
+                onChange={() =>
+                  setProduct((prev: any) => {
+                    return {
+                      ...prev,
+                      capacity: 8,
+                    };
+                  })
+                }
               />
             }
           />
@@ -128,35 +263,75 @@ const ProductData: React.FC = () => {
             title="16"
             media={
               <Radio
-                component="div"
-                value="16"
-                checked={groupValue === "16"}
-                onChange={() => setGroupValue("16")}
+                value={16}
+                checked={product?.capacity === 16}
+                onChange={() =>
+                  setProduct((prev: any) => {
+                    return {
+                      ...prev,
+                      capacity: 16,
+                    };
+                  })
+                }
               />
             }
           />
         </List>
 
-        <BlockTitle>General Information</BlockTitle>
         <List>
           <ListInput
             outline
             label="Product Name"
             type="text"
             placeholder="Product Name"
+            value={product?.product?.name}
+            onChange={(event) => {
+              setProduct((prev: any) => {
+                return {
+                  ...prev,
+                  product: {
+                    ...prev?.product,
+                    name: event.target.value,
+                  },
+                };
+              });
+            }}
           />
           <ListInput
             outline
             label="Central Office Name"
             type="text"
             placeholder="Central Office Name"
+            value={product?.central_office}
+            onChange={(event) => {
+              setProduct((prev: any) => {
+                return {
+                  ...prev,
+                  central_office: event.target.value,
+                };
+              });
+            }}
           />
           <ListInput
             outline
             label="Power Signal"
             type="text"
             placeholder="Power Signal"
+            value={product?.optical_power}
+            onChange={(event) => {
+              setProduct((prev: any) => {
+                return {
+                  ...prev,
+                  optical_power: event.target.value,
+                };
+              });
+            }}
           />
+          <div className="mx-4 mt-2">
+            <Button onClick={updateProduct} disabled={loading}>
+              Save
+            </Button>
+          </div>
         </List>
       </IonContent>
     </Popup>
@@ -171,30 +346,26 @@ interface DashboardPageProps
 const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
   const router = useIonRouter();
   const setIsPopupOpen = useSetAtom(popupAtom);
-  const {
-    loading: productDataLoading,
-    error: productDataError,
-    data: productData,
-  } = useQuery(FIND_PRODUCT_BY_SERIAL_NUMBER, {
-    variables: {
-      serialNumber: match.params.serialNumber,
-    },
-  });
+  const setProduct = useSetAtom(productAtom);
+  const { loading: productDataLoading, data: productData } = useQuery(
+    FIND_PRODUCT_BY_SERIAL_NUMBER,
+    {
+      variables: {
+        serialNumber: match.params.serialNumber,
+      },
+    }
+  );
   const [
     getHardwareInstallations,
-    {
-      loading: hardwareInstallationLoading,
-      error: hardwareInstallationError,
-      data: hardwareInstallationData,
-    },
+    { loading: hardwareInstallationLoading, data: hardwareInstallationData },
   ] = useLazyQuery(FIND_HARDWARE_INSTALLATIONS_BY_ID);
 
   useEffect(() => {
     (async () => {
       if (productData) {
-        const product = productData["product_serials"][0] || {};
+        const product = productData?.product_serials[0] || {};
         const hardwareInstallationId =
-          product["hardware_installation"]["hardware_installation_id"] || "";
+          product?.hardware_installation?.hardware_installation_id || "";
 
         if (product) {
           await getHardwareInstallations({
@@ -203,6 +374,8 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
               hardwareInstallationId,
             },
           });
+
+          setProduct(product);
         }
       }
     })();
@@ -306,12 +479,6 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
                       title={hw?.product_serial?.product?.name || ""}
                       footer={hw?.product_serial?.serial_number || ""}
                       titleWrapClassName="font-bold"
-                      chevronIcon={
-                        <IonIcon
-                          icon={qrCodeOutline}
-                          className="h-6 w-6"
-                        ></IonIcon>
-                      }
                     />
                   );
                 }

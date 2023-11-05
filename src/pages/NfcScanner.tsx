@@ -54,7 +54,7 @@ const NfcScanner = () => {
   const redirectToDashboard = async () => {
     setIsLoading(true);
     const { data } = await findProduct({ variables: { serialNumber: code } });
-    const productSerials = data["product_serials"];
+    const productSerials = data?.product_serials;
 
     if (productSerials.length > 0) {
       router.push(`/dashboard/${code}`, "forward", "replace");

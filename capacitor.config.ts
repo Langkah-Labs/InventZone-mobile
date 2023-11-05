@@ -5,7 +5,9 @@ const config: CapacitorConfig = {
   appName: "InventZone-Mobile",
   webDir: "dist",
   server: {
-    androidScheme: "https",
+    // TODO: change it to https when the app was deployed to the production
+    androidScheme: "http",
+    cleartext: true,
   },
 };
 

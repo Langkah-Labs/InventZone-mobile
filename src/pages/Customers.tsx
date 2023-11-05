@@ -7,9 +7,7 @@ import {
   Link,
   Fab,
   Popup,
-  BlockTitle,
   ListInput,
-  Button,
   Preloader,
   Block,
 } from "konsta/react";
@@ -17,9 +15,10 @@ import { IonContent, IonIcon, useIonRouter } from "@ionic/react";
 import { chevronBackOutline, addOutline } from "ionicons/icons";
 import { atom, useAtom, useSetAtom } from "jotai";
 import { RouteComponentProps } from "react-router";
-import { gql, useQuery } from "@apollo/client";
+import { gql, useMutation, useQuery } from "@apollo/client";
 import dayjs from "dayjs";
 import LocalizedFormat from "dayjs/plugin/localizedFormat";
+import { useState } from "react";
 
 dayjs.extend(LocalizedFormat);
 
@@ -41,11 +40,74 @@ const FIND_CUSTOMERS_BY_HARDWARE_INSTALLATION_ID = gql`
   }
 `;
 
+const INSERT_NEW_CUSTOMER = gql`
+  mutation InsertNewCustomer(
+    $customerId: String!
+    $address: String!
+    $service: String!
+    $powerSignal: String!
+    $modemSerialNumber: String!
+    $port: String!
+    $hardwareInstallationId: String!
+  ) {
+    insert_customers_one(
+      object: {
+        customer_id: $customerId
+        address: $address
+        service: $service
+        power_signal: $powerSignal
+        modem_serial_number: $modemSerialNumber
+        port: $port
+        hardware_installation_id: $hardwareInstallationId
+      }
+    ) {
+      id
+      created_at
+      updated_at
+    }
+  }
+`;
+
 const dialogAtom = atom(false);
 const modalSheetAtom = atom(false);
 
-const CustomerData: React.FC = () => {
+const CustomerData: React.FC<any> = ({
+  hardwareInstallationId,
+  submitCallback,
+}) => {
   const [openModalSheet, setOpenModalSheet] = useAtom(modalSheetAtom);
+  const [formData, setFormData] = useState({
+    customerId: "",
+    address: "",
+    service: "",
+    powerSignal: "",
+    modemSerialNumber: "",
+    port: "1",
+    hardwareInstallationId: "",
+  });
+  const [createCustomer, { loading }] = useMutation(INSERT_NEW_CUSTOMER);
+
+  const handleChange = (event: any) => {
+    event.preventDefault();
+    setFormData((prev) => ({
+      ...prev,
+      [event.target.name]: event.target.value,
+    }));
+  };
+
+  const createNewCustomer = async () => {
+    console.log(formData);
+
+    await createCustomer({
+      variables: {
+        ...formData,
+        hardwareInstallationId,
+      },
+    });
+
+    setOpenModalSheet(false);
+    submitCallback();
+  };
 
   return (
     <Popup
@@ -55,51 +117,67 @@ const CustomerData: React.FC = () => {
       <Navbar
         title="Add Customer"
         right={
-          <Link navbar onClick={() => setOpenModalSheet(false)}>
-            Save
-          </Link>
+          loading ? (
+            <Preloader />
+          ) : (
+            <Link navbar onClick={createNewCustomer}>
+              Save
+            </Link>
+          )
         }
       />
       <IonContent>
         <List>
           <ListInput
+            name="customerId"
             outline
             label="ID Pelanggan"
             type="text"
             placeholder="ID Pelanggan"
+            onChange={handleChange}
           />
           <ListInput
+            name="address"
             outline
             label="Alamat"
             type="textarea"
             placeholder="Alamat"
             inputClassName="!h-20 resize-none"
+            onChange={handleChange}
           />
           <ListInput
+            name="service"
             outline
             label="Layanan"
             type="text"
             placeholder="Layanan"
+            onChange={handleChange}
           />
           <ListInput
+            name="powerSignal"
             outline
             label="Power Signal"
             type="text"
             placeholder="Power Signal"
+            onChange={handleChange}
           />
           <ListInput
+            name="modemSerialNumber"
             outline
             label="S/N Modem"
             type="text"
             placeholder="S/N Modem"
+            onChange={handleChange}
           />
 
           <ListInput
+            name="port"
             outline
             label="Port"
             type="select"
             dropdown
-            defaultValue="1"
+            value={formData.port}
+            onChange={handleChange}
           >
             <option value="1">Port 1</option>
             <option value="2">Port 2</option>
@@ -119,7 +197,7 @@ const Customers: React.FC<CustomersPageProps> = ({ match }) => {
   const [openDialog, setOpenDialog] = useAtom(dialogAtom);
   const setOpenModalSheet = useSetAtom(modalSheetAtom);
   const router = useIonRouter();
-  const { loading, data } = useQuery(
+  const { loading, data, refetch } = useQuery(
     FIND_CUSTOMERS_BY_HARDWARE_INSTALLATION_ID,
     {
       variables: {
@@ -166,6 +244,7 @@ const Customers: React.FC<CustomersPageProps> = ({ match }) => {
                 {data?.customers?.map((customer: any) => {
                   return (
                     <ListItem
+                      key={customer?.id}
                       onClick={() => setOpenDialog(true)}
                       link
                       chevronMaterial={false}
@@ -206,7 +285,16 @@ const Customers: React.FC<CustomersPageProps> = ({ match }) => {
         }
       />
 
-      <CustomerData />
+      <CustomerData
+        hardwareInstallationId={match.params.hardwareInstallationId}
+        submitCallback={() =>
+          refetch({
+            variables: {
+              hardwareInstallationId: match.params.hardwareInstallationId,
+            },
+          })
+        }
+      />
     </div>
   );
 };

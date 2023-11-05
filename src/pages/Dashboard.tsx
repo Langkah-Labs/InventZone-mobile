@@ -10,6 +10,8 @@ import {
   Radio,
   Preloader,
   Block,
+  Dialog,
+  DialogButton,
 } from "konsta/react";
 import { IonContent, IonIcon, useIonRouter } from "@ionic/react";
 import {
@@ -17,7 +19,6 @@ import {
   personAddOutline,
   documentOutline,
   cameraOutline,
-  qrCodeOutline,
 } from "ionicons/icons";
 import { atom, useAtom, useSetAtom } from "jotai";
 import { gql, useMutation } from "@apollo/client";
@@ -31,6 +32,7 @@ import {
   NativeGeocoder,
   NativeGeocoderResult,
 } from "@ionic-native/native-geocoder";
+import inventZoneLogo from "../../resources/logo.png";
 
 dayjs.extend(LocalizedFormat);
 
@@ -118,6 +120,16 @@ const UPDATE_PRODUCT_BY_ID = gql`
       pk_columns: { id: $productId }
       _set: { name: $productName }
     ) {
+      id
+      created_at
+      updated_at
+    }
+  }
+`;
+
+const DELETE_PRODUCT_FROM_HARDWARE_INSTALLATION = gql`
+  mutation DeleteProductFromHardwareInstallation($id: bigint!) {
+    delete_hardware_installations_by_pk(id: $id) {
       id
       created_at
       updated_at
@@ -347,6 +359,8 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
   const router = useIonRouter();
   const setIsPopupOpen = useSetAtom(popupAtom);
   const [product, setProduct] = useAtom(productAtom);
+  const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
+  const [deletedProductId, setDeletedProductId] = useState("");
   const { loading: productDataLoading, data: productData } = useQuery(
     FIND_PRODUCT_BY_SERIAL_NUMBER,
     {
@@ -357,8 +371,15 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
   );
   const [
     getHardwareInstallations,
-    { loading: hardwareInstallationLoading, data: hardwareInstallationData },
+    {
+      loading: hardwareInstallationLoading,
+      data: hardwareInstallationData,
+      refetch,
+    },
   ] = useLazyQuery(FIND_HARDWARE_INSTALLATIONS_BY_ID);
+
+  const [deleteProductFromHardwareInstallation, { loading: deleteLoading }] =
+    useMutation(DELETE_PRODUCT_FROM_HARDWARE_INSTALLATION);
 
   useEffect(() => {
     (async () => {
@@ -395,9 +416,43 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
     router.push("/");
   };
 
+  const dismantleProduct = async () => {
+    setShowDeleteDialog(false);
+
+    await deleteProductFromHardwareInstallation({
+      variables: {
+        id: deletedProductId,
+      },
+    });
+
+    const product = productData?.product_serials[0] || {};
+    const hardwareInstallationId =
+      product?.hardware_installation?.hardware_installation_id || "";
+
+    await refetch({
+      serialNumber: match.params.serialNumber,
+      hardwareInstallationId,
+    });
+  };
+
   return (
     <div className="flex flex-col h-full">
-      <Navbar title="Invent Zone" centerTitle className="top-0 sticky" />
+      <Navbar
+        titleClassName="w-32"
+        title={<img src={inventZoneLogo} alt="InventZone logo" />}
+        centerTitle
+        bgClassName="bg-white border-b"
+        className="top-0 sticky"
+        right={
+          <Link
+            className="text-red-500 font-bold text-sm"
+            navbar
+            onClick={() => console.log("LOGOUT!")}
+          >
+            Logout
+          </Link>
+        }
+      />
 
       <IonContent>
         <div className="flex flex-col rounded bg-white border border-slate-100 shadow-sm p-4 m-4">
@@ -419,7 +474,7 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
           )}
         </div>
 
-        <div className="flex mx-4 gap-2 overflow-x-scroll md:overflow-auto border rounded border-slate-100 shadow-sm">
+        <div className="flex bg-white mx-4 gap-2 overflow-x-scroll md:overflow-auto border rounded border-slate-100 shadow-sm">
           <Button
             outline
             large
@@ -474,6 +529,11 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
                     <ListItem
                       key={hw?.id}
                       link
+                      onClick={() => {
+                        setShowDeleteDialog(true);
+                        setDeletedProductId(hw?.id);
+                      }}
+                      dividers
                       header={
                         dayjs(hw?.product_serial?.installed_at).format("LL") ||
                         ""
@@ -491,6 +551,23 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
       </IonContent>
 
       <ProductData />
+
+      <Dialog
+        opened={showDeleteDialog}
+        onBackdropClick={() => setShowDeleteDialog(false)}
+        title="Dismatle Product"
+        content="Are you sure you want to dismatle this product?"
+        buttons={
+          <>
+            <DialogButton onClick={() => setShowDeleteDialog(false)}>
+              No
+            </DialogButton>
+            <DialogButton strong onClick={dismantleProduct}>
+              Yes
+            </DialogButton>
+          </>
+        }
+      />
     </div>
   );
 };

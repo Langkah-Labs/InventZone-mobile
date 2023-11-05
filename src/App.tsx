@@ -43,7 +43,7 @@ const App: React.FC = () => {
           <IonRouterOutlet>
             <Route path="/" exact={true} component={ScannerMenu} />
             <Route
-              path="/:hardwareInstallationId"
+              path="/:hardwareInstallationId/:serialNumber"
               exact={true}
               component={ScannerMenu}
             />
@@ -53,13 +53,13 @@ const App: React.FC = () => {
               component={BarcodeScanner}
             />
             <Route
-              path="/scanners/barcode/:hardwareInstallationid"
+              path="/scanners/barcode/:hardwareInstallationid/:serialNumber"
               exact={true}
               component={BarcodeScanner}
             />
             <Route path="/scanners/nfc" exact={true} component={NfcScanner} />
             <Route
-              path="/scanners/nfc/:hardwareInstallationId"
+              path="/scanners/nfc/:hardwareInstallationId/:serialNumber"
               exact={true}
               component={NfcScanner}
             />

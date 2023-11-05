@@ -22,6 +22,7 @@ const menus = [
 interface ScannerMenuProps
   extends RouteComponentProps<{
     hardwareInstallationId?: string;
+    serialNumber?: string;
   }> {}
 
 const ScannerMenu: React.FC<ScannerMenuProps> = ({ match }) => {
@@ -41,8 +42,8 @@ const ScannerMenu: React.FC<ScannerMenuProps> = ({ match }) => {
               key={id}
               className="flex flex-col justify-center items-center gap-2 border border-[#167AFF] rounded p-4 text-[#167AFF] hover:bg-[#167AFF] hover:text-white w-full"
               to={`${
-                match.params.hardwareInstallationId
-                  ? `${href}/${match.params.hardwareInstallationId}`
+                match.params.hardwareInstallationId && match.params.serialNumber
+                  ? `${href}/${match.params.hardwareInstallationId}/${match.params.serialNumber}`
                   : href
               }`}
             >

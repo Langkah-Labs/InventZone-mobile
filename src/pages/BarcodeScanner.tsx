@@ -26,6 +26,7 @@ const sheetAtom = atom(false);
 interface BarcodeScannerProps
   extends RouteComponentProps<{
     hardwareInstallationId?: string;
+    serialNumber?: string;
   }> {}
 
 const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ match }) => {

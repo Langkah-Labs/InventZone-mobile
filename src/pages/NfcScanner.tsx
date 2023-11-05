@@ -7,7 +7,7 @@ import { NFCReader } from "../plugins/nfc-reader";
 import { gql, useLazyQuery, useMutation } from "@apollo/client";
 import { useAtom, atom } from "jotai";
 import { RouteComponentProps } from "react-router";
-import cuid2 from "@paralleldrive/cuid2";
+import { v4 as uuidv4 } from "uuid";
 
 const FIND_PRODUCT_BY_SERIAL_NUMBER = gql`
   query FindProductBySerialNumber($serialNumber: String!) {
@@ -34,6 +34,7 @@ const INSTALL_NEW_PRODUCT = gql`
   mutation InstallNewProduct(
     $hardwareInstallationId: String!
     $productSerialId: bigint!
+    $installedAt: timestamptz = "now()"
   ) {
     insert_hardware_installations_one(
       object: {
@@ -47,6 +48,16 @@ const INSTALL_NEW_PRODUCT = gql`
       created_at
       updated_at
     }
+
+    update_product_serials_by_pk(
+      pk_columns: { id: $productSerialId }
+      _set: { installed_at: $installedAt }
+    ) {
+      id
+      created_at
+      updated_at
+      installed_at
+    }
   }
 `;
 
@@ -56,6 +67,7 @@ const dialogAtom = atom(false);
 interface NfcScannerProps
   extends RouteComponentProps<{
     hardwareInstallationId?: string;
+    serialNumber?: string;
   }> {}
 
 const NfcScanner: React.FC<NfcScannerProps> = ({ match }) => {
@@ -85,18 +97,42 @@ const NfcScanner: React.FC<NfcScannerProps> = ({ match }) => {
     const productSerials = data?.product_serials;
 
     if (productSerials.length > 0) {
-      if (!productSerials.hardware_installation) {
-        // generate cuid
-        const newId = cuid2.createId();
+      if (
+        !productSerials[0]?.hardware_installation &&
+        !match.params?.hardwareInstallationId
+      ) {
+        // install new product
+        const newId = uuidv4();
         await installProduct({
           variables: {
             hardwareInstallationId: newId,
-            productSerialId: productSerials?.id,
+            productSerialId: productSerials[0]?.id,
           },
         });
       }
 
-      router.push(`/dashboard/${code}`, "forward", "replace");
+      if (
+        !productSerials[0]?.hardware_installation &&
+        match.params?.hardwareInstallationId
+      ) {
+        const hardwareInstallationId = match.params?.hardwareInstallationId;
+        await installProduct({
+          variables: {
+            hardwareInstallationId,
+            productSerialId: productSerials[0]?.id,
+          },
+        });
+      }
+
+      if (match.params.serialNumber) {
+        router.push(
+          `/dashboard/${match.params.serialNumber}`,
+          "forward",
+          "replace"
+        );
+      } else {
+        router.push(`/dashboard/${code}`, "forward", "replace");
+      }
     } else {
       setShowErrorDialog(true);
     }

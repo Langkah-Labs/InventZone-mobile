@@ -367,6 +367,7 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
       variables: {
         serialNumber: match.params.serialNumber,
       },
+      fetchPolicy: "no-cache",
     }
   );
   const [
@@ -378,8 +379,9 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
     },
   ] = useLazyQuery(FIND_HARDWARE_INSTALLATIONS_BY_ID);
 
-  const [deleteProductFromHardwareInstallation, { loading: deleteLoading }] =
-    useMutation(DELETE_PRODUCT_FROM_HARDWARE_INSTALLATION);
+  const [deleteProductFromHardwareInstallation] = useMutation(
+    DELETE_PRODUCT_FROM_HARDWARE_INSTALLATION
+  );
 
   useEffect(() => {
     (async () => {
@@ -394,6 +396,7 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
               serialNumber: match.params.serialNumber,
               hardwareInstallationId,
             },
+            fetchPolicy: "no-cache",
           });
 
           setProduct(product);
@@ -417,7 +420,7 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
     const hardwareInstallationId =
       product?.hardware_installation?.hardware_installation_id || "";
 
-    router.push(`/${hardwareInstallationId}`);
+    router.push(`/${hardwareInstallationId}/${match.params.serialNumber}`);
   };
 
   const dismantleProduct = async () => {

@@ -68,6 +68,16 @@ const INSERT_NEW_CUSTOMER = gql`
   }
 `;
 
+const REMOVE_CUSTOMER_BY_ID = gql`
+  mutation RemoveCustomerById($id: bigint!) {
+    delete_customers_by_pk(id: $id) {
+      id
+      created_at
+      updated_at
+    }
+  }
+`;
+
 const dialogAtom = atom(false);
 const modalSheetAtom = atom(false);
 
@@ -205,6 +215,8 @@ const Customers: React.FC<CustomersPageProps> = ({ match }) => {
       },
     }
   );
+  const [removeCustomerById] = useMutation(REMOVE_CUSTOMER_BY_ID);
+  const [customerId, setCustomerId] = useState("");
 
   const goBack = () => {
     router.goBack();
@@ -212,6 +224,25 @@ const Customers: React.FC<CustomersPageProps> = ({ match }) => {
 
   const openAddCustomerDialog = () => {
     setOpenModalSheet((prev) => !prev);
+  };
+
+  const dismatleCustomer = async () => {
+    setOpenDialog(false);
+    await removeCustomerById({
+      variables: {
+        id: customerId,
+      },
+    });
+    setCustomerId("");
+    refetchCustomers();
+  };
+
+  const refetchCustomers = () => {
+    refetch({
+      variables: {
+        hardwareInstallationId: match.params.hardwareInstallationId,
+      },
+    });
   };
 
   return (
@@ -245,7 +276,10 @@ const Customers: React.FC<CustomersPageProps> = ({ match }) => {
                   return (
                     <ListItem
                       key={customer?.id}
-                      onClick={() => setOpenDialog(true)}
+                      onClick={() => {
+                        setCustomerId(customer?.id);
+                        setOpenDialog(true);
+                      }}
                       link
                       chevronMaterial={false}
                       after={dayjs(customer?.created_at).format("LL") || ""}
@@ -275,9 +309,7 @@ const Customers: React.FC<CustomersPageProps> = ({ match }) => {
         content="Are you sure to dismantle the customer?"
         buttons={
           <>
-            <DialogButton onClick={() => setOpenDialog(false)}>
-              Yes
-            </DialogButton>
+            <DialogButton onClick={dismatleCustomer}>Yes</DialogButton>
             <DialogButton strong onClick={() => setOpenDialog(false)}>
               No
             </DialogButton>
@@ -287,13 +319,7 @@ const Customers: React.FC<CustomersPageProps> = ({ match }) => {
 
       <CustomerData
         hardwareInstallationId={match.params.hardwareInstallationId}
-        submitCallback={() =>
-          refetch({
-            variables: {
-              hardwareInstallationId: match.params.hardwareInstallationId,
-            },
-          })
-        }
+        submitCallback={refetchCustomers}
       />
     </div>
   );

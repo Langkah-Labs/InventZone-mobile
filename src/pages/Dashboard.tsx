@@ -8,6 +8,8 @@ import {
   Link,
   ListInput,
   Radio,
+  Preloader,
+  Block,
 } from "konsta/react";
 import { IonContent, IonIcon, useIonRouter } from "@ionic/react";
 import {
@@ -19,6 +21,13 @@ import {
 } from "ionicons/icons";
 import { atom, useAtom, useSetAtom } from "jotai";
 import { gql } from "@apollo/client";
+import { RouteComponentProps } from "react-router";
+import { useQuery, useLazyQuery } from "@apollo/client";
+import { useEffect } from "react";
+import dayjs from "dayjs";
+import LocalizedFormat from "dayjs/plugin/localizedFormat";
+
+dayjs.extend(LocalizedFormat);
 
 const popupAtom = atom(false);
 const radioGroupAtom = atom("");
@@ -45,9 +54,15 @@ const FIND_PRODUCT_BY_SERIAL_NUMBER = gql`
 `;
 
 const FIND_HARDWARE_INSTALLATIONS_BY_ID = gql`
-  query FindHardwareInstallationById($hardwareInstallationId: String!) {
+  query FindHardwareInstallationById(
+    $hardwareInstallationId: String!
+    $serialNumber: String!
+  ) {
     hardware_installations(
-      where: { hardware_installation_id: { _eq: $hardwareInstallationId } }
+      where: {
+        hardware_installation_id: { _eq: $hardwareInstallationId }
+        product_serial: { serial_number: { _neq: $serialNumber } }
+      }
     ) {
       id
       hardware_installation_id
@@ -148,9 +163,50 @@ const ProductData: React.FC = () => {
   );
 };
 
-const Dashboard: React.FC = () => {
+interface DashboardPageProps
+  extends RouteComponentProps<{
+    serialNumber: string;
+  }> {}
+
+const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
   const router = useIonRouter();
   const setIsPopupOpen = useSetAtom(popupAtom);
+  const {
+    loading: productDataLoading,
+    error: productDataError,
+    data: productData,
+  } = useQuery(FIND_PRODUCT_BY_SERIAL_NUMBER, {
+    variables: {
+      serialNumber: match.params.serialNumber,
+    },
+  });
+  const [
+    getHardwareInstallations,
+    {
+      loading: hardwareInstallationLoading,
+      error: hardwareInstallationError,
+      data: hardwareInstallationData,
+    },
+  ] = useLazyQuery(FIND_HARDWARE_INSTALLATIONS_BY_ID);
+
+  useEffect(() => {
+    (async () => {
+      if (productData) {
+        const product = productData["product_serials"][0] || {};
+        const hardwareInstallationId =
+          product["hardware_installation"]["hardware_installation_id"] || "";
+
+        if (product) {
+          await getHardwareInstallations({
+            variables: {
+              serialNumber: match.params.serialNumber,
+              hardwareInstallationId,
+            },
+          });
+        }
+      }
+    })();
+  }, [productData]);
 
   const handleUpdateData = () => {
     setIsPopupOpen((prev) => !prev);
@@ -170,8 +226,22 @@ const Dashboard: React.FC = () => {
 
       <IonContent>
         <div className="flex flex-col rounded bg-white border border-slate-100 shadow-sm p-4 m-4">
-          <h1 className="text-black font-bold text-lg">ODP - CA</h1>
-          <p className="text-slate-500 text-md">02 February 2023</p>
+          {productDataLoading ? (
+            <Block className="text-center">
+              <Preloader />
+            </Block>
+          ) : (
+            <>
+              <h1 className="text-black font-bold text-lg">
+                {productData?.product_serials[0]?.product?.name || ""}
+              </h1>
+              <p className="text-slate-500 text-md">
+                {dayjs(productData?.product_serials[0]?.installed_at).format(
+                  "LL"
+                ) || ""}
+              </p>
+            </>
+          )}
         </div>
 
         <div className="flex mx-4 gap-2 overflow-x-scroll md:overflow-auto border rounded border-slate-100 shadow-sm">
@@ -215,19 +285,40 @@ const Dashboard: React.FC = () => {
           </Button>
         </div>
 
-        <BlockTitle>Linked Products</BlockTitle>
-        <List dividersMaterial>
-          <ListItem
-            link
-            header="02 Feb 2023"
-            title="FAT"
-            footer="70B3D51A0"
-            titleWrapClassName="font-bold"
-            chevronIcon={
-              <IonIcon icon={qrCodeOutline} className="h-6 w-6"></IonIcon>
-            }
-          />
-        </List>
+        {hardwareInstallationLoading ? (
+          <Block className="text-center">
+            <Preloader />
+          </Block>
+        ) : (
+          <>
+            <BlockTitle>Linked Products</BlockTitle>
+            <List dividersMaterial>
+              {hardwareInstallationData?.hardware_installations?.map(
+                (hw: any) => {
+                  return (
+                    <ListItem
+                      key={hw?.id}
+                      link
+                      header={
+                        dayjs(hw?.product_serial?.installed_at).format("LL") ||
+                        ""
+                      }
+                      title={hw?.product_serial?.product?.name || ""}
+                      footer={hw?.product_serial?.serial_number || ""}
+                      titleWrapClassName="font-bold"
+                      chevronIcon={
+                        <IonIcon
+                          icon={qrCodeOutline}
+                          className="h-6 w-6"
+                        ></IonIcon>
+                      }
+                    />
+                  );
+                }
+              )}
+            </List>
+          </>
+        )}
       </IonContent>
 
       <ProductData />

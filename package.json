@@ -24,6 +24,7 @@
     "@ionic/react-router": "^7.0.0",
     "@types/react-router": "^5.1.20",
     "@types/react-router-dom": "^5.3.3",
+    "dayjs": "^1.11.10",
     "graphql": "^16.8.1",
     "ionicons": "^7.0.0",
     "jotai": "^2.5.0",

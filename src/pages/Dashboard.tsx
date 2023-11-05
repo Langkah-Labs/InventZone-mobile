@@ -17,7 +17,7 @@ import {
   cameraOutline,
   qrCodeOutline,
 } from "ionicons/icons";
-import { atom, useAtom } from "jotai";
+import { atom, useAtom, useSetAtom } from "jotai";
 import { gql } from "@apollo/client";
 
 const popupAtom = atom(false);
@@ -64,7 +64,7 @@ const FIND_HARDWARE_INSTALLATIONS_BY_ID = gql`
   }
 `;
 
-const CustomerData: React.FC = () => {
+const ProductData: React.FC = () => {
   const [isPopupOpen, setIsPopupOpen] = useAtom(popupAtom);
 
   const [groupValue, setGroupValue] = useAtom(radioGroupAtom);
@@ -150,7 +150,7 @@ const CustomerData: React.FC = () => {
 
 const Dashboard: React.FC = () => {
   const router = useIonRouter();
-  const [isPopupOpen, setIsPopupOpen] = useAtom(popupAtom);
+  const setIsPopupOpen = useSetAtom(popupAtom);
 
   const handleUpdateData = () => {
     setIsPopupOpen((prev) => !prev);
@@ -230,7 +230,7 @@ const Dashboard: React.FC = () => {
         </List>
       </IonContent>
 
-      <CustomerData />
+      <ProductData />
     </div>
   );
 };

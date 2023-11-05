@@ -346,7 +346,7 @@ interface DashboardPageProps
 const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
   const router = useIonRouter();
   const setIsPopupOpen = useSetAtom(popupAtom);
-  const setProduct = useSetAtom(productAtom);
+  const [product, setProduct] = useAtom(productAtom);
   const { loading: productDataLoading, data: productData } = useQuery(
     FIND_PRODUCT_BY_SERIAL_NUMBER,
     {
@@ -386,7 +386,9 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
   };
 
   const handleCustomers = () => {
-    router.push("/customers");
+    router.push(
+      `/customers/${product?.hardware_installation?.hardware_installation_id}`
+    );
   };
 
   const handleAttachProduct = () => {

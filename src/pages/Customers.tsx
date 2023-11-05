@@ -10,10 +10,36 @@ import {
   BlockTitle,
   ListInput,
   Button,
+  Preloader,
+  Block,
 } from "konsta/react";
 import { IonContent, IonIcon, useIonRouter } from "@ionic/react";
 import { chevronBackOutline, addOutline } from "ionicons/icons";
 import { atom, useAtom, useSetAtom } from "jotai";
+import { RouteComponentProps } from "react-router";
+import { gql, useQuery } from "@apollo/client";
+import dayjs from "dayjs";
+import LocalizedFormat from "dayjs/plugin/localizedFormat";
+
+dayjs.extend(LocalizedFormat);
+
+const FIND_CUSTOMERS_BY_HARDWARE_INSTALLATION_ID = gql`
+  query FindCustomersByHardwareInstallationId(
+    $hardwareInstallationId: String!
+  ) {
+    customers(
+      where: { hardware_installation_id: { _eq: $hardwareInstallationId } }
+    ) {
+      id
+      port
+      customer_id
+      address
+      service
+      created_at
+      updated_at
+    }
+  }
+`;
 
 const dialogAtom = atom(false);
 const modalSheetAtom = atom(false);
@@ -84,10 +110,23 @@ const CustomerData: React.FC = () => {
   );
 };
 
-const Customers: React.FC = () => {
+interface CustomersPageProps
+  extends RouteComponentProps<{
+    hardwareInstallationId: string;
+  }> {}
+
+const Customers: React.FC<CustomersPageProps> = ({ match }) => {
   const [openDialog, setOpenDialog] = useAtom(dialogAtom);
   const setOpenModalSheet = useSetAtom(modalSheetAtom);
   const router = useIonRouter();
+  const { loading, data } = useQuery(
+    FIND_CUSTOMERS_BY_HARDWARE_INSTALLATION_ID,
+    {
+      variables: {
+        hardwareInstallationId: match.params.hardwareInstallationId,
+      },
+    }
+  );
 
   const goBack = () => {
     router.goBack();
@@ -110,34 +149,44 @@ const Customers: React.FC = () => {
       />
 
       <IonContent>
-        <List dividers margin="my-2">
-          <ListItem
-            onClick={() => setOpenDialog(true)}
-            link
-            chevronMaterial={false}
-            after="Dec 02, 2020"
-            header="Port 1"
-            title="Customer 1"
-            subtitle="Address 1"
-            text="Service 1"
-          />
-          <ListItem
-            onClick={() => setOpenDialog(true)}
-            link
-            chevronMaterial={false}
-            after="Dec 02, 2020"
-            header="Port 2"
-            title="Customer 2"
-            subtitle="Address 2"
-            text="Service 2"
-          />
-        </List>
+        {loading ? (
+          <Block className="text-center">
+            <Preloader />
+          </Block>
+        ) : (
+          <>
+            {data?.customers?.length === 0 ? (
+              <Block className="flex justify-center items-center mt-8">
+                <h1 className="font-bold text-slate-500">
+                  There are no customers added yet!
+                </h1>
+              </Block>
+            ) : (
+              <List dividers margin="my-2">
+                {data?.customers?.map((customer: any) => {
+                  return (
+                    <ListItem
+                      onClick={() => setOpenDialog(true)}
+                      link
+                      chevronMaterial={false}
+                      after={dayjs(customer?.created_at).format("LL") || ""}
+                      header={`Port ${customer?.port}`}
+                      title={customer?.customer_id}
+                      subtitle={customer?.address}
+                      text={customer?.service}
+                    />
+                  );
+                })}
+              </List>
+            )}
 
-        <Fab
-          className="fixed right-4-safe bottom-4-safe z-20"
-          icon={<IonIcon icon={addOutline} />}
-          onClick={openAddCustomerDialog}
-        />
+            <Fab
+              className="fixed right-4-safe bottom-4-safe z-20"
+              icon={<IonIcon icon={addOutline} />}
+              onClick={openAddCustomerDialog}
+            />
+          </>
+        )}
       </IonContent>
 
       <Dialog

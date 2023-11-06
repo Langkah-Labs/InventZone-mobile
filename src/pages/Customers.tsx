@@ -13,12 +13,12 @@ import {
 } from "konsta/react";
 import { IonContent, IonIcon, useIonRouter } from "@ionic/react";
 import { chevronBackOutline, addOutline } from "ionicons/icons";
-import { atom, useAtom, useSetAtom } from "jotai";
+import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
 import { RouteComponentProps } from "react-router";
-import { gql, useMutation, useQuery } from "@apollo/client";
+import { gql, useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import dayjs from "dayjs";
 import LocalizedFormat from "dayjs/plugin/localizedFormat";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 dayjs.extend(LocalizedFormat);
 
@@ -78,6 +78,28 @@ const REMOVE_CUSTOMER_BY_ID = gql`
   }
 `;
 
+const FIND_HARDWARE_INSTALLATIONS_BY_ID = gql`
+  query FindHardwareInstallationById($hardwareInstallationId: String!) {
+    hardware_installations(
+      where: { hardware_installation_id: { _eq: $hardwareInstallationId } }
+    ) {
+      id
+      hardware_installation_id
+      product_serial {
+        id
+        product {
+          id
+          name
+        }
+        installed_at
+        serial_number
+        capacity
+        capacity_remaining
+      }
+    }
+  }
+`;
+
 const dialogAtom = atom(false);
 const modalSheetAtom = atom(false);
 
@@ -96,6 +118,13 @@ const CustomerData: React.FC<any> = ({
     hardwareInstallationId: "",
   });
   const [createCustomer, { loading }] = useMutation(INSERT_NEW_CUSTOMER);
+  const [findHardwareInstallation] = useLazyQuery(
+    FIND_HARDWARE_INSTALLATIONS_BY_ID
+  );
+  const [findCustomersByHardwareInstallationId] = useLazyQuery(
+    FIND_CUSTOMERS_BY_HARDWARE_INSTALLATION_ID
+  );
+  const [ports, setPorts] = useState<number[]>([]);
 
   const handleChange = (event: any) => {
     event.preventDefault();
@@ -106,8 +135,6 @@ const CustomerData: React.FC<any> = ({
   };
 
   const createNewCustomer = async () => {
-    console.log(formData);
-
     await createCustomer({
       variables: {
         ...formData,
@@ -118,6 +145,56 @@ const CustomerData: React.FC<any> = ({
     setOpenModalSheet(false);
     submitCallback();
   };
+
+  const availablePorts = async () => {
+    const response = await findHardwareInstallation({
+      variables: {
+        hardwareInstallationId,
+      },
+    });
+
+    const data = response.data;
+    if (data.hardware_installations?.length > 0) {
+      let portCapacity = 0;
+
+      const hardwareInstallations = data.hardware_installations;
+      for (let i = 0; i < hardwareInstallations.length; i++) {
+        const hardware = hardwareInstallations[i];
+        if (
+          hardware?.product_serial?.capacity ||
+          hardware?.product_serial?.capacity !== 0
+        ) {
+          portCapacity = hardware?.product_serial?.capacity;
+          break;
+        }
+      }
+
+      const response = await findCustomersByHardwareInstallationId({
+        variables: {
+          hardwareInstallationId: hardwareInstallationId,
+        },
+      });
+
+      const customerPorts = response?.data?.customers?.map((customer: any) =>
+        parseInt(customer?.port, 10)
+      );
+      let availablePorts = [];
+      for (let i = 0; i < portCapacity; i++) {
+        const portNumber = i + 1;
+        if (!customerPorts?.includes(portNumber)) {
+          availablePorts.push(portNumber);
+        }
+      }
+
+      setPorts(availablePorts);
+    }
+  };
+
+  useEffect(() => {
+    (async () => {
+      await availablePorts();
+    })();
+  }, []);
 
   return (
     <Popup
@@ -189,8 +266,13 @@ const CustomerData: React.FC<any> = ({
             value={formData.port}
             onChange={handleChange}
           >
-            <option value="1">Port 1</option>
-            <option value="2">Port 2</option>
+            {ports?.map((port) => {
+              return (
+                <option key={port} value={`${port}`}>
+                  Port {port}
+                </option>
+              );
+            })}
           </ListInput>
         </List>
       </IonContent>

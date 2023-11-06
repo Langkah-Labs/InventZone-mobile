@@ -497,7 +497,9 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
     const hardwareInstallationId =
       product?.hardware_installation?.hardware_installation_id || "";
 
-    router.push(`/${hardwareInstallationId}/${match.params.serialNumber}`);
+    router.push(
+      `/scanners/${hardwareInstallationId}/${match.params.serialNumber}`
+    );
   };
 
   const dismantleProduct = async () => {

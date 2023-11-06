@@ -35,6 +35,7 @@ import {
 import { Camera, CameraResultType } from "@capacitor/camera";
 import Session from "supertokens-web-js/recipe/session";
 import inventZoneLogo from "../../resources/logo.png";
+import { Preferences } from "@capacitor/preferences";
 
 dayjs.extend(LocalizedFormat);
 
@@ -440,6 +441,7 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
   const [deletedProductId, setDeletedProductId] = useState("");
   const [logoutModal, setLogoutModal] = useState(false);
+  const [user, setUser] = useState<any>({});
   const { loading: productDataLoading, data: productData } = useQuery(
     FIND_PRODUCT_BY_SERIAL_NUMBER,
     {
@@ -461,6 +463,20 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
   const [deleteProductFromHardwareInstallation] = useMutation(
     DELETE_PRODUCT_FROM_HARDWARE_INSTALLATION
   );
+
+  useEffect(() => {
+    (async () => {
+      const result = await Preferences.get({
+        key: "user",
+      });
+
+      if (result.value) {
+        const user = JSON.parse(result.value);
+
+        setUser(user);
+      }
+    })();
+  }, [user]);
 
   useEffect(() => {
     (async () => {
@@ -575,45 +591,53 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
         </div>
 
         <div className="flex bg-white mx-4 gap-2 overflow-x-scroll md:overflow-auto border rounded border-slate-100 shadow-sm">
-          <Button
-            outline
-            large
-            onClick={handleAttachProduct}
-            className="flex flex-col w-28 h-28 justify-center items-center gap-2 p-4 rounded text-xs font-medium text-center"
-          >
-            <IonIcon icon={hammerOutline} className="w-6 h-6"></IonIcon>
-            Attach Product
-          </Button>
+          {user?.role === "installation" ? (
+            <>
+              <Button
+                outline
+                large
+                onClick={handleAttachProduct}
+                className="flex flex-col w-28 h-28 justify-center items-center gap-2 p-4 rounded text-xs font-medium text-center"
+              >
+                <IonIcon icon={hammerOutline} className="w-6 h-6"></IonIcon>
+                Attach Product
+              </Button>
 
-          <Button
-            outline
-            large
-            onClick={handleCustomers}
-            className="flex flex-col w-28 h-28 justify-center items-center gap-2 p-4 rounded text-xs font-medium text-center"
-          >
-            <IonIcon icon={personAddOutline} className="w-6 h-6"></IonIcon>
-            Customers Data
-          </Button>
+              <Button
+                outline
+                large
+                onClick={handleCustomers}
+                className="flex flex-col w-28 h-28 justify-center items-center gap-2 p-4 rounded text-xs font-medium text-center"
+              >
+                <IonIcon icon={personAddOutline} className="w-6 h-6"></IonIcon>
+                Customers Data
+              </Button>
+            </>
+          ) : null}
 
-          <Button
-            outline
-            large
-            onClick={handleUpdateData}
-            className="flex flex-col w-28 h-28 justify-center items-center gap-2 p-4 rounded text-xs font-medium text-center"
-          >
-            <IonIcon icon={documentOutline} className="w-6 h-6"></IonIcon>
-            Update Data
-          </Button>
+          {user?.role === "project" ? (
+            <>
+              <Button
+                outline
+                large
+                onClick={handleUpdateData}
+                className="flex flex-col w-28 h-28 justify-center items-center gap-2 p-4 rounded text-xs font-medium text-center"
+              >
+                <IonIcon icon={documentOutline} className="w-6 h-6"></IonIcon>
+                Update Data
+              </Button>
 
-          <Button
-            outline
-            large
-            onClick={handleShowUpload}
-            className="flex flex-col w-28 h-28 justify-center items-center gap-2 p-4 rounded text-xs font-medium text-center"
-          >
-            <IonIcon icon={cameraOutline} className="w-6 h-6"></IonIcon>
-            Upload Photo
-          </Button>
+              <Button
+                outline
+                large
+                onClick={handleShowUpload}
+                className="flex flex-col w-28 h-28 justify-center items-center gap-2 p-4 rounded text-xs font-medium text-center"
+              >
+                <IonIcon icon={cameraOutline} className="w-6 h-6"></IonIcon>
+                Upload Photo
+              </Button>
+            </>
+          ) : null}
         </div>
 
         {hardwareInstallationLoading ? (

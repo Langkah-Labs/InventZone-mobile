@@ -12,6 +12,7 @@ import { chevronBackOutline } from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { gql, useLazyQuery, useMutation } from "@apollo/client";
 import { signUp } from "supertokens-web-js/recipe/emailpassword";
+import { Preferences } from "@capacitor/preferences";
 
 const FIND_USER_BY_EMAIL = gql`
   query FindUserByEmail($email: String!) {
@@ -38,7 +39,7 @@ const FIND_USER_BY_EMAIL = gql`
 `;
 
 const CREATE_NEW_USER = gql`
-  mutation MyMutation(
+  mutation CreateNewUser(
     $company: String!
     $name: String!
     $username: String!
@@ -233,6 +234,12 @@ const Register: React.FC = () => {
           setIsLoading(false);
           return;
         }
+
+        const user = response.data?.insert_users_one;
+        await Preferences.set({
+          key: "user",
+          value: JSON.stringify(user),
+        });
 
         router.push("/scanners", "forward", "replace");
       }

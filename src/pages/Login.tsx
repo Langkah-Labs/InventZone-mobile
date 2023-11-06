@@ -1,9 +1,10 @@
 import { Block, List, ListInput, Link, Button, Toast } from "konsta/react";
-import { IonPage, IonContent, useIonRouter } from "@ionic/react";
+import { IonContent, useIonRouter } from "@ionic/react";
 import { gql, useLazyQuery } from "@apollo/client";
 import { useState } from "react";
 import { signIn } from "supertokens-web-js/recipe/emailpassword";
 import { Browser } from "@capacitor/browser";
+import { Preferences } from "@capacitor/preferences";
 
 const FIND_USER_BY_EMAIL = gql`
   query FindUserByEmail($email: String!) {
@@ -116,6 +117,13 @@ const Login: React.FC = () => {
           message: "Failed to login, please check your credentials!",
         }));
       } else {
+        const user = data?.users[0];
+
+        await Preferences.set({
+          key: "user",
+          value: JSON.stringify(user),
+        });
+
         router.push("/scanners", "forward", "replace");
       }
     } catch (err) {

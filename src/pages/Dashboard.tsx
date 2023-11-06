@@ -20,7 +20,7 @@ import {
   documentOutline,
   cameraOutline,
 } from "ionicons/icons";
-import { atom, useAtom, useSetAtom } from "jotai";
+import { atom, useAtom, useSetAtom, useAtomValue } from "jotai";
 import { gql, useMutation } from "@apollo/client";
 import { RouteComponentProps } from "react-router";
 import { useQuery, useLazyQuery } from "@apollo/client";
@@ -32,12 +32,14 @@ import {
   NativeGeocoder,
   NativeGeocoderResult,
 } from "@ionic-native/native-geocoder";
+import { Camera, CameraResultType } from "@capacitor/camera";
 import inventZoneLogo from "../../resources/logo.png";
 
 dayjs.extend(LocalizedFormat);
 
 const popupAtom = atom(false);
 const productAtom = atom<any>({});
+const uploadDialogAtom = atom(false);
 
 const FIND_PRODUCT_BY_SERIAL_NUMBER = gql`
   query FindProductBySerialNumber($serialNumber: String!) {
@@ -61,6 +63,7 @@ const FIND_PRODUCT_BY_SERIAL_NUMBER = gql`
       longitude
       serial_number
       central_office
+      attachment
     }
   }
 `;
@@ -131,6 +134,20 @@ const DELETE_PRODUCT_FROM_HARDWARE_INSTALLATION = gql`
   mutation DeleteProductFromHardwareInstallation($id: bigint!) {
     delete_hardware_installations_by_pk(id: $id) {
       id
+      created_at
+      updated_at
+    }
+  }
+`;
+
+const UPLOAD_PHOTO = gql`
+  mutation UploadPhoto($id: bigint!, $attachment: String!) {
+    update_product_serials_by_pk(
+      pk_columns: { id: $id }
+      _set: { attachment: $attachment }
+    ) {
+      id
+      attachment
       created_at
       updated_at
     }
@@ -350,6 +367,65 @@ const ProductData: React.FC = () => {
   );
 };
 
+const UploadPhoto: React.FC = () => {
+  const [showUpload, setShowUpload] = useAtom(uploadDialogAtom);
+  const product = useAtomValue(productAtom);
+  const [photo, setPhoto] = useState("");
+  const [uploadPhoto, { loading }] = useMutation(UPLOAD_PHOTO);
+
+  useEffect(() => {
+    setPhoto(product?.attachment);
+  }, [product]);
+
+  const takePicture = async () => {
+    const image = await Camera.getPhoto({
+      quality: 50,
+      allowEditing: true,
+      resultType: CameraResultType.Base64,
+    });
+
+    const imageBase64 = image.base64String;
+    if (imageBase64) {
+      setPhoto(imageBase64);
+      console.log("IMAGE PATH ====> ", imageBase64);
+
+      await uploadPhoto({
+        variables: {
+          id: product?.id,
+          attachment: imageBase64,
+        },
+      });
+    }
+  };
+
+  return (
+    <Popup opened={showUpload} onBackdropClick={() => setShowUpload(false)}>
+      <Navbar
+        title="Upload Photo"
+        right={
+          <Link navbar onClick={() => setShowUpload(false)}>
+            Close
+          </Link>
+        }
+      />
+      <Block className="min-h-[calc(100vh-184px)]">
+        {!photo ? (
+          <div className="flex flex-col items-center justify-center border-2 p-4 mb-4 border-dashed rounded min-h-[calc(100vh-184px)]">
+            <h1 className="font-bold text-md">No image was uploaded</h1>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-184px)]">
+            <img src={`data:image/jpeg;base64,${photo}`} alt="Uploaded photo" />
+          </div>
+        )}
+        <Button onClick={takePicture} disabled={loading}>
+          Upload Photo
+        </Button>
+      </Block>
+    </Popup>
+  );
+};
+
 interface DashboardPageProps
   extends RouteComponentProps<{
     serialNumber: string;
@@ -359,6 +435,7 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
   const router = useIonRouter();
   const setIsPopupOpen = useSetAtom(popupAtom);
   const [product, setProduct] = useAtom(productAtom);
+  const setShowUpload = useSetAtom(uploadDialogAtom);
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
   const [deletedProductId, setDeletedProductId] = useState("");
   const { loading: productDataLoading, data: productData } = useQuery(
@@ -442,6 +519,10 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
     });
   };
 
+  const handleShowUpload = () => {
+    setShowUpload(true);
+  };
+
   return (
     <div className="flex flex-col h-full">
       <Navbar
@@ -515,6 +596,7 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
           <Button
             outline
             large
+            onClick={handleShowUpload}
             className="flex flex-col w-28 h-28 justify-center items-center gap-2 p-4 rounded text-xs font-medium text-center"
           >
             <IonIcon icon={cameraOutline} className="w-6 h-6"></IonIcon>
@@ -575,6 +657,8 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
           </>
         }
       />
+
+      <UploadPhoto />
     </div>
   );
 };

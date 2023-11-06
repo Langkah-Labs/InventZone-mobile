@@ -67,7 +67,11 @@ const App: React.FC = () => {
               exact={true}
               component={NfcScanner}
             />
-            <Route path="/dashboard/:serialNumber" component={Dashboard} />
+            <Route
+              path="/dashboard/:serialNumber"
+              exact={true}
+              component={Dashboard}
+            />
             <Route
               path="/customers/:hardwareInstallationId"
               component={Customers}

@@ -33,6 +33,7 @@ import {
   NativeGeocoderResult,
 } from "@ionic-native/native-geocoder";
 import { Camera, CameraResultType } from "@capacitor/camera";
+import Session from "supertokens-web-js/recipe/session";
 import inventZoneLogo from "../../resources/logo.png";
 
 dayjs.extend(LocalizedFormat);
@@ -438,6 +439,7 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
   const setShowUpload = useSetAtom(uploadDialogAtom);
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
   const [deletedProductId, setDeletedProductId] = useState("");
+  const [logoutModal, setLogoutModal] = useState(false);
   const { loading: productDataLoading, data: productData } = useQuery(
     FIND_PRODUCT_BY_SERIAL_NUMBER,
     {
@@ -525,6 +527,14 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
     setShowUpload(true);
   };
 
+  const logOut = async () => {
+    await Session.signOut();
+
+    setLogoutModal(false);
+
+    router.push("/", "forward", "replace");
+  };
+
   return (
     <div className="flex flex-col h-full">
       <Navbar
@@ -537,7 +547,7 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
           <Link
             className="text-red-500 font-bold text-sm"
             navbar
-            onClick={() => console.log("LOGOUT!")}
+            onClick={() => setLogoutModal(true)}
           >
             Logout
           </Link>
@@ -661,6 +671,21 @@ const Dashboard: React.FC<DashboardPageProps> = ({ match }) => {
       />
 
       <UploadPhoto />
+
+      <Dialog
+        opened={logoutModal}
+        onBackdropClick={() => setLogoutModal(false)}
+        title="Logout"
+        content="Are you sure you want to logout?"
+        buttons={
+          <>
+            <DialogButton onClick={logOut}>Yes</DialogButton>
+            <DialogButton strong onClick={() => setLogoutModal(false)}>
+              No
+            </DialogButton>
+          </>
+        }
+      />
     </div>
   );
 };

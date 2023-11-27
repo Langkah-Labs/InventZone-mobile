@@ -177,12 +177,12 @@ const Login: React.FC = () => {
             </Button>
           </div>
 
-          <Block className="flex justify-center gap-2">
+          {/* <Block className="flex justify-center gap-2">
             <p className="text-gray-500">Don't have an account?</p>
             <Link onClick={redirectToRegister} className="font-bold">
               Sign Up
             </Link>
-          </Block>
+          </Block> */}
         </List>
       </div>
 
